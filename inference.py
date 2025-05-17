@@ -156,8 +156,8 @@ def log_likelihood(NAB_meas,pa_old,pb_old,Cabcd_old,N1=bins_mjj-1,N2=bins_nclust
 # Learning
 #
 ########################################################################
-pa_seed = np.sum(NAB_top,1)/np.sum(NAB_top)#st.dirichlet(alpha=np.ones(N1)).rvs()[0]
-pb_seed = np.sum(NAB_top,0)/np.sum(NAB_top)#st.dirichlet(alpha=np.ones(N2)).rvs()[0]
+pa_seed = np.sum(NAB_top,1)/np.sum(NAB_top)
+pb_seed = np.sum(NAB_top,0)/np.sum(NAB_top)
 Cabcd_seed = np.zeros((bins_mjj-1,bins_ncluster,bins_mjj-1,bins_ncluster))
 Cabcd_diag = np.zeros((bins_mjj-1,bins_ncluster,bins_mjj-1,bins_ncluster))
 
@@ -402,6 +402,7 @@ plt.xlabel('$\pi_1$',fontsize=25)
 plt.legend(fontsize=12)
 plt.tight_layout()
 plt.savefig('frac_con_vi.pdf')
+plt.close()
 #
 print("top fraction mean = ",np.mean(sorted_posterior['class_fractions.2']))
 print("top fraction std = ",np.std(sorted_posterior['class_fractions.2']))
@@ -409,7 +410,7 @@ print("top fraction std = ",np.std(sorted_posterior['class_fractions.2']))
 #
 #
 M1 = 1500
-#M2 = 1500
+#
 myalphas = np.zeros((2,bins_ncluster,M1))
 alpha_mean = np.zeros((2,bins_ncluster))
 alpha_err = np.zeros((2,bins_ncluster))
@@ -482,6 +483,7 @@ plt.xlabel('$N_\mathrm{clus}$',fontsize=25)
 plt.xticks(midbins[0],[2+i for i in range(bins_ncluster)])
 plt.tight_layout()
 plt.savefig('clus_con_vi.pdf')
+plt.close()
 #
 plt.figure(dpi=140)
 tot_posterior0 = []
@@ -548,22 +550,29 @@ plt.xlabel(r'$\mathrm{Mass\, [GeV]}$',fontsize=25)
 plt.xticks([0,2,4,6,8,10,12,14],[150,160,170,180,190,200,210,220])
 plt.tight_layout()
 plt.savefig('mass_con_vi.pdf')
+plt.close()
+#
+del M1
+del myalphas
+del mybetas
+del alpha_mean
+del beta_mean
+del alpha_err
+del beta_err
 #
 # calculating the distances
 #
-#The number 750 is because we have 1500 posterior samples in total (as I understand)
+#The number 750 is because we have 1500 posterior samples in total
 M1 = 750
 M1p = 750
 #
 myalphas = np.zeros((2,bins_ncluster,M1))
 mybetas = np.zeros((2,bins_mjj-1,M1))
-mypAB = np.zeros((2,15,bins_ncluster,M1))
 mypies  = np.zeros((2,M1))
 #
 myalphas2 = np.zeros((2,bins_ncluster,M1p))
 mybetas2 = np.zeros((2,bins_mjj-1,M1p))
 mypies2  = np.zeros((2,M1p))
-mypAB2 = np.zeros((2,bins_mjj-1,bins_ncluster,M1p))
 #
 myalphas_mean = np.zeros((2,bins_ncluster))
 mybetas_mean = np.zeros((2,bins_mjj-1))
@@ -673,4 +682,74 @@ np.save('dist_beta_post.npy',dist_beta_post)
 np.save('dist_beta_prior.npy',dist_beta_prior)
 np.save('dist_pi_post.npy',dist_pi_post)
 np.save('dist_pi_prior.npy',dist_pi_prior)
+#########################################
 #
+# MAPs calculations
+#
+##########################################
+#############################################################
+
+pAB_true = np.zeros((2,bins_mjj-1,bins_ncluster))
+mypAB = np.zeros((2,bins_mjj-1,bins_ncluster,M1))
+#
+for mjj_bin in range(bins_mjj-1):
+    for ncluster_bin in range(bins_ncluster):
+        for mjj_bin_bis in range(bins_mjj-1):
+            for ncluster_bin_bis in range(bins_ncluster):
+                mypAB[0,mjj_bin,ncluster_bin]+=Cabcd_QCD[mjj_bin,ncluster_bin,mjj_bin_bis,ncluster_bin_bis]*myalphas[0,ncluster_bin_bis]*mybetas[0,mjj_bin_bis]
+                mypAB[1,mjj_bin,ncluster_bin]+=Cabcd_top[mjj_bin,ncluster_bin,mjj_bin_bis,ncluster_bin_bis]*myalphas[1,ncluster_bin_bis]*mybetas[1,mjj_bin_bis]
+                pAB_true[0,mjj_bin,ncluster_bin]+=Cabcd_QCD[mjj_bin,ncluster_bin,mjj_bin_bis,ncluster_bin_bis]*true_QCD_ncluster[ncluster_bin_bis]*true_QCD_mjj[mjj_bin_bis]
+                pAB_true[1,mjj_bin,ncluster_bin]+=Cabcd_top[mjj_bin,ncluster_bin,mjj_bin_bis,ncluster_bin_bis]*true_top_ncluster[ncluster_bin_bis]*true_top_mjj[mjj_bin_bis]
+pAB = np.mean(mypies,axis=-1),np.mean(mypAB,axis=-1)
+#
+map_qcd_post = np.zeros((bins_ncluster,bins_mjj-1))
+map_top_post = np.zeros((bins_ncluster,bins_mjj-1))
+map_post =  np.zeros((bins_ncluster,bins_mjj-1))
+#
+map_qcd_true = np.zeros((bins_ncluster,bins_mjj-1))
+map_top_true = np.zeros((bins_ncluster,bins_mjj-1))
+#
+for ic in range(0,5):
+    for im in range(0,15):
+        mysum_post = pAB[0,im,ic] + pAB[1,im,ic]
+        map_qcd_post[ic,im]= pAB[0,im,ic]
+        map_top_post[ic,im]= pAB[1,im,ic]
+        map_post[ic,im] = np.mean(mypies,axis=-1)[0]*pAB[0,im,ic] + np.mean(mypies,axis=-1)[1]*pAB[1,im,ic]
+#        
+        mysum_true = pAB_true[0,im,ic] + pAB_true[1,im,ic]
+        map_qcd_true[ic,im]= pAB_true[0,im,ic]
+        map_top_true[ic,im]= pAB_true[1,im,ic]
+#
+fig = plt.figure()
+ax = fig.add_subplot(111)          
+pos0 = ax.imshow(map_top_post.T[:,:],origin='lower',aspect=0.3,vmin=0, vmax=0.1,cmap='gist_heat_r'
+                )
+ax.xaxis.set(ticks=[0,1,2,3,4],ticklabels=[2,3,4,5,6])
+ax.yaxis.set(ticks=np.arange(-0.5,15,2),ticklabels=np.arange(150,225,10))
+ax.tick_params(axis='both', which='major', labelsize=18)
+ax.set_xlabel(r'$N_{\mathrm{clus}}$', fontsize=22)
+ax.set_ylabel(r'$\mathrm{Mass\, [GeV]}$',fontsize=22)
+cbar=fig.colorbar(pos1,ax=ax,fraction=0.15,location='right',shrink=1)
+cbar.ax.tick_params(labelsize=12) 
+ax.set_title("$\Sigma=1400$ posterior",size=23)
+fig.tight_layout(pad=0.15)
+fig.savefig('map_con_vi.pdf')
+plt.close()
+#
+fig = plt.figure()
+ax = fig.add_subplot(111)         
+pos1 = ax.imshow(map_top_true.T[:,:],origin='lower',aspect=0.3,vmin=0, vmax=0.1,cmap='gist_heat_r'
+                    )
+ax.xaxis.set(ticks=[0,1,2,3,4],ticklabels=[2,3,4,5,6])
+ax.yaxis.set(ticks=np.arange(-0.5,15,2),ticklabels=np.arange(150,225,10))
+ax.tick_params(axis='both', which='major', labelsize=18)
+ax.set_xlabel(r'$N_{\mathrm{clus}}$', fontsize=22)
+ax.set_ylabel(r'$\mathrm{Mass\, [GeV]}$',fontsize=22)
+cbar=fig.colorbar(pos1,ax=ax,fraction=0.15,location='right',shrink=1)
+cbar.ax.tick_params(labelsize=12)
+ax.set_title("true",size=23)
+fig.tight_layout(pad=0.15,h_pad=0, w_pad=0, rect=None)
+fig.savefig('map_true.pdf')
+plt.close()
+#############################################################
+#############################################################
