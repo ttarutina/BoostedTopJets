@@ -234,21 +234,35 @@ true_labels1 = np.zeros(N1)
 #
 Nbkg1 = Nbkg
 Nsig1 = Nsig
+#
+NAB_QCD_kl = np.zeros((bins_mjj-1,bins_ncluster)) # for KL divergence calc q QCD
+NAB_top_kl = np.zeros((bins_mjj-1,bins_ncluster))
+#
 for n in range(N1):
     z = np.argmax(stats.multinomial(n=1,p=true_class_fractions).rvs(size=1),axis=1)
     true_labels1[n] = z
     if z == 0:
-        try: ncluster1[n] = bin_assigner(ncluster_bins,data[int(bkg_indexes[Nbkg1]),0])+1
+        try: ind_2 = bin_assigner(ncluster_bins,data[int(bkg_indexes[Nbkg1]),0])+1
         except: print(bin_assigner(ncluster_bins,data[int(bkg_indexes[Nbkg1]),0]))
-        try: mjj1[n] = bin_assigner(mjj_bins,data[int(bkg_indexes[Nbkg1]),1])+1
+        try: ind_1 = bin_assigner(mjj_bins,data[int(bkg_indexes[Nbkg1]),1])+1
         except: print("Bkg mjj",bin_assigner(mjj_bins,data[int(bkg_indexes[Nbkg1]),1]))
+        ncluster1[n] = ind_2
+        mjj1[n] = ind_1
+        NAB_QCD_kl[ind_1-1,ind_2-1]+=1
         Nbkg1+=1
     elif z == 1:
-        try: ncluster1[n] = bin_assigner(ncluster_bins,data[int(sig_indexes[Nsig1]),0])+1
+        try: ind_2 = bin_assigner(ncluster_bins,data[int(sig_indexes[Nsig1]),0])+1
         except: print(bin_assigner(ncluster_bins,data[int(sig_indexes[Nsig1]),0]))
-        try: mjj1[n] = bin_assigner(mjj_bins,data[int(sig_indexes[Nsig1]),1])+1
+        try: ind_1 = bin_assigner(mjj_bins,data[int(sig_indexes[Nsig1]),1])+1
         except: print("Sig mjj",bin_assigner(mjj_bins,data[int(sig_indexes[Nsig1]),1]))
+        ncluster1[n] = ind_2
+        mjj1[n] = ind_1
+        NAB_top_kl[ind_1-1,ind_2-1]+=1
         Nsig1+=1
+#
+NAB_QCD_kl = NAB_QCD_kl/(Nbkg1 - Nbkg) # we need it for KL
+NAB_top_kl = NAB_top_kl/(Nsig1 - Nsig)
+NAB_kl = (NAB_QCD_kl + NAB_top_kl)/(Nbkg1 + Nsig1 - Nbkg - Nsig)
 #
 # marginal distributions for inference dataset
 #
@@ -698,13 +712,20 @@ for mjj_bin in range(bins_mjj-1):
             for ncluster_bin_bis in range(bins_ncluster):
                 mypAB[0,mjj_bin,ncluster_bin]+=Cabcd_QCD[mjj_bin,ncluster_bin,mjj_bin_bis,ncluster_bin_bis]*myalphas[0,ncluster_bin_bis]*mybetas[0,mjj_bin_bis]
                 mypAB[1,mjj_bin,ncluster_bin]+=Cabcd_top[mjj_bin,ncluster_bin,mjj_bin_bis,ncluster_bin_bis]*myalphas[1,ncluster_bin_bis]*mybetas[1,mjj_bin_bis]
+                mypAB2[0,mjj_bin,ncluster_bin]+=Cabcd_QCD[mjj_bin,ncluster_bin,mjj_bin_bis,ncluster_bin_bis]*myalphas2[0,ncluster_bin_bis]*mybetas2[0,mjj_bin_bis]
+                mypAB2[1,mjj_bin,ncluster_bin]+=Cabcd_top[mjj_bin,ncluster_bin,mjj_bin_bis,ncluster_bin_bis]*myalphas2[1,ncluster_bin_bis]*mybetas2[1,mjj_bin_bis]
                 pAB_true[0,mjj_bin,ncluster_bin]+=Cabcd_QCD[mjj_bin,ncluster_bin,mjj_bin_bis,ncluster_bin_bis]*true_QCD_ncluster[ncluster_bin_bis]*true_QCD_mjj[mjj_bin_bis]
                 pAB_true[1,mjj_bin,ncluster_bin]+=Cabcd_top[mjj_bin,ncluster_bin,mjj_bin_bis,ncluster_bin_bis]*true_top_ncluster[ncluster_bin_bis]*true_top_mjj[mjj_bin_bis]
-pAB = np.mean(mypies,axis=-1),np.mean(mypAB,axis=-1)
+pies, pAB = np.mean(mypies,axis=-1),np.mean(mypAB,axis=-1)
+pies2, pAB2 = np.mean(mypies2,axis=-1),np.mean(mypAB2,axis=-1)
 #
 map_qcd_post = np.zeros((bins_ncluster,bins_mjj-1))
 map_top_post = np.zeros((bins_ncluster,bins_mjj-1))
 map_post =  np.zeros((bins_ncluster,bins_mjj-1))
+#
+map_qcd_prior = np.zeros((bins_ncluster,bins_mjj-1))
+map_top_prior = np.zeros((bins_ncluster,bins_mjj-1))
+map_prior =  np.zeros((bins_ncluster,bins_mjj-1))
 #
 map_qcd_true = np.zeros((bins_ncluster,bins_mjj-1))
 map_top_true = np.zeros((bins_ncluster,bins_mjj-1))
@@ -715,6 +736,10 @@ for ic in range(0,5):
         map_qcd_post[ic,im]= pAB[0,im,ic]
         map_top_post[ic,im]= pAB[1,im,ic]
         map_post[ic,im] = np.mean(mypies,axis=-1)[0]*pAB[0,im,ic] + np.mean(mypies,axis=-1)[1]*pAB[1,im,ic]
+#
+        map_qcd_prior[ic,im] = pAB2[0,im,ic]
+        map_top_prior[ic,im] = pAB2[1,im,ic]
+        map_prior[ic,im] = np.mean(mypies2,axis=-1)[0]*pAB2[0,im,ic] + np.mean(mypies2,axis=-1)[1]*pAB2[1,im,ic]
 #        
         mysum_true = pAB_true[0,im,ic] + pAB_true[1,im,ic]
         map_qcd_true[ic,im]= pAB_true[0,im,ic]
@@ -753,3 +778,48 @@ fig.savefig('map_true.pdf')
 plt.close()
 #############################################################
 #############################################################
+########################################################################
+#
+# KL divergence
+#
+########################################################################
+map_qcd_post_kl = map_qcd_post.T
+map_top_post_kl = map_top_post.T
+map_post_kl = map_post.T
+#
+map_qcd_prior_kl = map_qcd_prior.T
+map_top_prior_kl = map_top_prior.T
+map_prior_kl = map_prior.T
+#
+kl_post_qcd = np.zeros((5,15))
+kl_post_top = np.zeros((5,15))
+kl_post = np.zeros((5,15))
+#
+kl_prior_qcd = np.zeros((5,15))
+kl_prior_top = np.zeros((5,15))
+kl_prior = np.zeros((5,15))
+#
+NAB_QCD_kl = NAB_QCD_kl/np.sum(NAB_QCD_kl)
+NAB_top_kl = NAB_top_kl/np.sum(NAB_top_kl)
+NAB_kl = NAB_kl/np.sum(NAB_kl)
+#
+#print("test2 = ",np.sum(NAB_kl))
+#print("test3 = ",np.sum(map_post))
+#
+for ic in range(0,5):
+    for im in range(0,15):
+        kl_post_qcd[ic,im] = map_qcd_post[ic,im]*np.log(map_qcd_post[ic,im]/NAB_QCD_kl[im,ic])
+        kl_post_top[ic,im] = map_top_post[ic,im]*np.log(map_top_post[ic,im]/NAB_top_kl[im,ic])
+        kl_post[ic,im] = map_post[ic,im]*np.log(map_post[ic,im]/NAB_kl[im,ic])
+        #
+        kl_prior_qcd[ic,im] = map_qcd_prior[ic,im]*np.log(map_qcd_prior[ic,im]/NAB_QCD_kl[im,ic])
+        kl_prior_top[ic,im] = map_top_prior[ic,im]*np.log(map_top_prior[ic,im]/NAB_top_kl[im,ic])
+        kl_prior[ic,im] = map_prior[ic,im]*np.log(map_prior[ic,im]/NAB_kl[im,ic])
+#
+print("my KL div post QCD = ",np.sum(kl_post_qcd))
+print("my KL div post top = ",np.sum(kl_post_top))
+print("my KL div post total = ",np.sum(kl_post))
+print("my KL div prior QCD = ",np.sum(kl_prior_qcd))
+print("my KL div prior top = ",np.sum(kl_prior_top))
+print("my KL div pror total = ",np.sum(kl_prior))
+#
