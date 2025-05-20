@@ -8,6 +8,10 @@ import stan
 import pandas as pd
 from scipy import stats
 from scipy.special import softmax
+from scipy.stats import bernoulli
+from scipy.stats import multinomial
+from scipy.stats import dirichlet
+
 import nest_asyncio
 nest_asyncio.apply()
 #
@@ -17,7 +21,7 @@ np.random.seed(100)
 # Import data
 #
 ########################################################################
-data = np.array(pd.read_csv('data.dat',delimiter=' '))
+data = np.array(pd.read_csv('input/data.dat',delimiter=' '))
 #
 def bin_assigner(bins,val):
 #
@@ -295,7 +299,6 @@ myprior_top_mjj=np.array(myprior_top_mjj)
 myprior_QCD_mjj = []
 for index in range(15):
     myz = np.argmax(stats.multinomial(n=1,p=[0.5,0.5]).rvs(size=1),axis=1)
-    print("myz = ",myz)
     if myz == 1:
        myprior_QCD_mjj.append(0.1-index*0.0033)
     else:
@@ -415,7 +418,7 @@ plt.axvline(true_class_fractions[1], linestyle='dashed', color='black', label='t
 plt.xlabel('$\pi_1$',fontsize=25)
 plt.legend(fontsize=12)
 plt.tight_layout()
-plt.savefig('frac_con_vi.pdf')
+plt.savefig('figs/frac_con_vi.pdf')
 plt.close()
 #
 print("top fraction mean = ",np.mean(sorted_posterior['class_fractions.2']))
@@ -496,7 +499,7 @@ plt.ylim([0.,0.58])
 plt.xlabel('$N_\mathrm{clus}$',fontsize=25)
 plt.xticks(midbins[0],[2+i for i in range(bins_ncluster)])
 plt.tight_layout()
-plt.savefig('clus_con_vi.pdf')
+plt.savefig('figs/clus_con_vi.pdf')
 plt.close()
 #
 plt.figure(dpi=140)
@@ -563,7 +566,7 @@ plt.ylim([0.,0.180])
 plt.xlabel(r'$\mathrm{Mass\, [GeV]}$',fontsize=25)
 plt.xticks([0,2,4,6,8,10,12,14],[150,160,170,180,190,200,210,220])
 plt.tight_layout()
-plt.savefig('mass_con_vi.pdf')
+plt.savefig('figs/mass_con_vi.pdf')
 plt.close()
 #
 del M1
@@ -690,12 +693,12 @@ dist_pi_prior[3] = np.absolute(mypies2_std[1])
 #
 # saving the data to the files
 #
-np.save('dist_alpha_post.npy',dist_alpha_post)
-np.save('dist_alpha_prior.npy',dist_alpha_prior)
-np.save('dist_beta_post.npy',dist_beta_post)
-np.save('dist_beta_prior.npy',dist_beta_prior)
-np.save('dist_pi_post.npy',dist_pi_post)
-np.save('dist_pi_prior.npy',dist_pi_prior)
+np.save('output/dist_alpha_post.npy',dist_alpha_post)
+np.save('output/dist_alpha_prior.npy',dist_alpha_prior)
+np.save('output/dist_beta_post.npy',dist_beta_post)
+np.save('output/dist_beta_prior.npy',dist_beta_prior)
+np.save('output/dist_pi_post.npy',dist_pi_post)
+np.save('output/dist_pi_prior.npy',dist_pi_prior)
 #########################################
 #
 # MAPs calculations
@@ -705,6 +708,7 @@ np.save('dist_pi_prior.npy',dist_pi_prior)
 
 pAB_true = np.zeros((2,bins_mjj-1,bins_ncluster))
 mypAB = np.zeros((2,bins_mjj-1,bins_ncluster,M1))
+mypAB2 = np.zeros((2,bins_mjj-1,bins_ncluster,M1))
 #
 for mjj_bin in range(bins_mjj-1):
     for ncluster_bin in range(bins_ncluster):
@@ -754,11 +758,11 @@ ax.yaxis.set(ticks=np.arange(-0.5,15,2),ticklabels=np.arange(150,225,10))
 ax.tick_params(axis='both', which='major', labelsize=18)
 ax.set_xlabel(r'$N_{\mathrm{clus}}$', fontsize=22)
 ax.set_ylabel(r'$\mathrm{Mass\, [GeV]}$',fontsize=22)
-cbar=fig.colorbar(pos1,ax=ax,fraction=0.15,location='right',shrink=1)
+cbar=fig.colorbar(pos0,ax=ax,fraction=0.15,location='right',shrink=1)
 cbar.ax.tick_params(labelsize=12) 
 ax.set_title("$\Sigma=1400$ posterior",size=23)
 fig.tight_layout(pad=0.15)
-fig.savefig('map_con_vi.pdf')
+fig.savefig('figs/map_con_vi.pdf')
 plt.close()
 #
 fig = plt.figure()
@@ -774,7 +778,7 @@ cbar=fig.colorbar(pos1,ax=ax,fraction=0.15,location='right',shrink=1)
 cbar.ax.tick_params(labelsize=12)
 ax.set_title("true",size=23)
 fig.tight_layout(pad=0.15,h_pad=0, w_pad=0, rect=None)
-fig.savefig('map_true.pdf')
+fig.savefig('figs/map_true.pdf')
 plt.close()
 #############################################################
 #############################################################
