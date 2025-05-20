@@ -8,7 +8,7 @@ The data to be used in the code is in the file "data.dat.gz"
 
 Instructions to run the code:
 
-1)in the working directort create folders
+1)in the working directory create folders
 
      input
      figs
