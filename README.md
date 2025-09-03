@@ -4,6 +4,8 @@ In this work we consider top-quark related observables, in particular those from
 
 After calculating the transfer matrices, we set the priors and perform the inference and assess the quality of the inferred distributions, by computing the quantifiers of the goodness of the inference. Finally we get the Maximum a Posteriori (MAP) for the posterior and  calculate Kull-back–Leibler(KL) divergence, which is a measure of the statistical difference between a model PDF and the true PDF.
 
+The minimal requirements are declared in the file "requirements_minimal.txt"
+
 The data to be used in the code is in the file "data.dat.gz"
 
 Instructions to run the code:

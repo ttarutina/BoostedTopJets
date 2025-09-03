@@ -327,8 +327,8 @@ data {
   int<lower=1> dncluster;  // bins for ncluster
   int<lower=1> dmjj;  // bins for mjj
   int<lower=1> N1;  // data points
-  int<lower=1, upper=dncluster> ncluster1[N1];  // ncluster measurements
-  int<lower=1, upper=dmjj> mjj1[N1];  // mjj measurements
+  array[N1] int<lower=1, upper=dncluster> ncluster1;  // ncluster measurements
+  array[N1] int<lower=1, upper=dmjj> mjj1;  // mjj measurements
   vector[2] eta_class_fractions; // prior for class fractions
   vector[dncluster-1] eta_ncluster_QCD; // prior parameters for QCD ncluster distr.
   vector[dncluster-1] eta_ncluster_top; // prior parameters for top ncluster distr.
